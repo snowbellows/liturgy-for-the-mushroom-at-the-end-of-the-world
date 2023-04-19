@@ -1,7 +1,4 @@
-use std::{
-    path::PathBuf,
-    time::{self, Duration},
-};
+use std::{path::PathBuf, time::Duration};
 
 use nannou::prelude::*;
 
