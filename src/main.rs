@@ -1,12 +1,13 @@
 use std::time::Duration;
 
 use liturgy_for_the_mushroom_at_the_end_of_the_world::{
-    captured_frame_path, Circle, CIRCLE_MAX, CIRCLE_MIN, WINDOW_SIZE,
+    helpers::FrameCapture, Circle, CIRCLE_MAX, CIRCLE_MIN, WINDOW_SIZE,
 };
 use nannou::prelude::*;
 
 struct Model {
     circles: Vec<Circle>,
+    frame_capture: FrameCapture,
 }
 
 impl Model {
@@ -31,6 +32,7 @@ fn model(app: &App) -> Model {
         circles: (0..3)
             .map(|i| Circle::new(CIRCLE_MIN, CIRCLE_MAX, 0.05 * i as f32))
             .collect(),
+        frame_capture: FrameCapture::new_from_app(app),
     };
 
     model.step_circles(Duration::from_micros(0));
@@ -58,8 +60,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     draw.to_frame(app, &frame).unwrap();
 
     // Capture the frame!
-    let file_path = captured_frame_path(app, &frame);
-    app.main_window().capture_frame(file_path);
+    model.frame_capture.capture_main_window_frame(app);
 
     if app.duration.since_start >= Duration::from_secs(10) {
         app.quit()
