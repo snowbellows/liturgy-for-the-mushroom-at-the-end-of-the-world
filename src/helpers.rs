@@ -52,4 +52,17 @@ impl FrameCapture {
 
         app.main_window().capture_frame(file_path);
     }
+
+    pub fn new_from_app_with_seed(app: &App, seed: &str) -> Self {
+        let start_time = chrono::Local::now().format("%Y-%m-%d:%H:%M:%S");
+
+        return FrameCapture {
+            dir_path: app
+                .project_path()
+                .expect("failed to locate `project_path`")
+                .join("output")
+                .join(format!("{}-{}", start_time.to_string(), seed)),
+        };
+    }
+
 }

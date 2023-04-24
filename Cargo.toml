@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 chrono = "0.4.23"
 nannou = "0.18.1"
+rand = "0.8.5"
+rand_chacha = "0.3.1"
