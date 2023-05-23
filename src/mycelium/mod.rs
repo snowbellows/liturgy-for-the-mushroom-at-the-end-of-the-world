@@ -12,7 +12,7 @@ use std::{
 pub const WINDOW_SIZE: f32 = 900.0;
 pub const CYCLE_SECONDS: f32 = 10.0;
 pub const NUM_ITERS: u64 = 5;
-pub const NUM_SPOKES: u64 = 10;
+pub const NUM_SPOKES: u64 = 20;
 pub const BRANCH_LENGTH: f32 = 300.0;
 pub const TRANSPARENT_BLANCHED_ALMOND: (f32, f32, f32, f32) = (255.0, 235.0, 205.0, 0.000001);
 pub const STEP_LENGTH: f32 = 10.0;
@@ -134,7 +134,11 @@ fn model(app: &App) -> Model {
 
 fn update(app: &App, model: &mut Model, _update: Update) {
     // model.step_circles(app.duration.since_start);
-    step_lines(model);
+    let stepped_lines = step_lines(&model);
+    model.lines = stepped_lines;
+
+    let moved_lines = move_lines(&model);
+    model.lines = moved_lines;
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
@@ -157,9 +161,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     // test_vector_math(&draw, 3);
 
-    for p in &model.starting_points {
-        draw_cirlce(&draw, p);
-    }
+    // for p in &model.starting_points {
+    //     draw_cirlce(&draw, p);
+    // }
 
     for (_, line) in &model.lines {
         draw_polyline(&draw, line);
@@ -180,45 +184,67 @@ fn vec2_hash(v1: Vec2, v2: Vec2) -> String {
     format!("{v1}:{v2}")
 }
 
-fn step_lines(model: &mut Model) {
+fn step_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
+    let mut lines = model.lines.clone();
+    let mut rng = model.rng.clone();
     for p_start in &model.starting_points {
-        // println!("p_start: {p_start}");
+        for p_end in &model.starting_points {
+            // println!("p_start: {p_start}");
 
-        let maybe_closest_point = model.starting_points.iter().reduce(|acc, p1| {
-            if p_start != p1 && p_start.distance(*p1) < p_start.distance(*acc) {
-                p1
-            } else {
-                acc
-            }
-        });
+            // see if we can find the closest point
+            // let maybe_closest_point = model.starting_points.iter().reduce(|acc, p1| {
+            //     if p_start != p1 && p_start.distance(*p1) < p_start.distance(*acc) {
+            //         p1
+            //     } else {
+            //         acc
+            //     }
+            // });
 
-        if let Some(p_close) = maybe_closest_point {
+            // select a random point
+            // let random_point = model
+            //     .starting_points
+            //     .get(model.rng.gen_range(0..model.starting_points.len()));
+
+            // if let Some(p_close) = random_point {
             // println!("p_close: {p_close}");
 
-            let line = model
-                .lines
-                .entry(vec2_hash(*p_start, *p_close))
+            // once we have the closest point we grab the corresponding line between the two points or create a new one
+            let line = lines
+                .entry(vec2_hash(*p_start, *p_end))
                 .or_insert(vec![*p_start]);
 
             // println!("line: {line:?}");
 
+            // take the last point from the line
             if let Some(p_last) = line.last() {
-                if p_last != p_close {
+                // if the last point in the line is the same as the "end point" we're done
+                if p_last != p_end {
                     // println!("p_last: {p_last}");
 
-                    let length = 2.0;
-                    let d_left = p_last.distance(*p_close);
+                    // if not check if we're within x pixels of the "end point" and return that
+                    let length = 5.0;
+                    let d_left = p_last.distance(*p_end);
                     let p_next = if d_left <= length {
-                        *p_close
+                        *p_end
                     } else {
-                        let percent_traversed =  p_start.distance(*p_last) / p_start.distance(*p_close);
-
                         // println!("percent_traversed: {percent_traversed}");
 
-                        p_last.lerp(
-                            *p_close,
+                        // randomise where the end point is for fun, curly lines
+                        let rand_amount = 3;
+                        let p_random = 
+                             vec2(
+                                rng.gen_range(-rand_amount..=rand_amount) as f32,
+                                rng.gen_range(-rand_amount..=rand_amount) as f32,
+                            );
+
+                        // we lerp/move towards the "end point"
+                        let percent_traversed =
+                            p_start.distance(*p_last) / p_start.distance(*p_end);
+
+                        (*p_last + p_random).lerp(
+                            *p_end + p_random,
                             if percent_traversed > 0.0 {
-                                percent_traversed / 10.0
+                                percent_traversed / 50.0
                             } else {
                                 0.001
                             },
@@ -232,10 +258,46 @@ fn step_lines(model: &mut Model) {
             } else {
                 println!("no p_last");
             }
-        } else {
-            println!("no p_close");
+            // } else {
+            //     println!("no p_close");
+            // }
         }
     }
+
+    lines
+}
+
+fn move_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
+    let mut lines = model.lines.clone();
+    let mut rng = model.rng.clone();
+
+    // for (_, mut line) in &lines {
+    //     for mut p in line {
+    //         let rand_amount = 5;
+    //         let x = rng.gen_range(-rand_amount..rand_amount) as f32 / 10.0;
+    //         let y = rng.gen_range(-rand_amount..rand_amount) as f32 / 10.0;
+
+    //         p = &(*p + vec2(x, y));
+    //     }
+    // }
+
+    lines.clone()
+        .into_iter()
+        .map(|(hash, line)| {
+            (
+                hash,
+                line.iter()
+                    .map(|p| {
+                        let rand_amount = 5;
+                        let x = rng.gen_range(-rand_amount..=rand_amount) as f32 / 10.0;
+                        let y = rng.gen_range(-rand_amount..=rand_amount) as f32 / 10.0;
+
+                        *p + vec2(x, y)
+                    })
+                    .collect(),
+            )
+        })
+        .collect()
 }
 
 fn draw_polyline(draw: &Draw, line: &Vec<Point2>) {
@@ -244,7 +306,7 @@ fn draw_polyline(draw: &Draw, line: &Vec<Point2>) {
     // }
 
     draw.polyline()
-        .weight(2.0)
+        .weight(3.0)
         .color(Rgba::from_components(TRANSPARENT_BLANCHED_ALMOND))
         .points(line.clone());
 }
