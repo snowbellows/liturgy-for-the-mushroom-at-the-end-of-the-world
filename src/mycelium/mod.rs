@@ -222,7 +222,7 @@ fn step_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
                     // println!("p_last: {p_last}");
 
                     // if not check if we're within x pixels of the "end point" and return that
-                    let length = 5.0;
+                    let length = 2.0;
                     let d_left = p_last.distance(*p_end);
                     let p_next = if d_left <= length {
                         *p_end
@@ -230,25 +230,30 @@ fn step_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
                         // println!("percent_traversed: {percent_traversed}");
 
                         // randomise where the end point is for fun, curly lines
-                        let rand_amount = 3;
-                        let p_random = 
-                             vec2(
-                                rng.gen_range(-rand_amount..=rand_amount) as f32,
-                                rng.gen_range(-rand_amount..=rand_amount) as f32,
-                            );
+                        let rand_amount = 3.0;
+                        let p_random = vec2(
+                            rng.gen_range(-rand_amount..=rand_amount) as f32,
+                            rng.gen_range(-rand_amount..=rand_amount) as f32,
+                        );
 
-                        // we lerp/move towards the "end point"
-                        let percent_traversed =
-                            p_start.distance(*p_last) / p_start.distance(*p_end);
+                        // we lerp towards the "end point"
+                        // let percent_traversed =
+                        //     p_start.distance(*p_last) / p_start.distance(*p_end);
 
-                        (*p_last + p_random).lerp(
-                            *p_end + p_random,
-                            if percent_traversed > 0.0 {
-                                percent_traversed / 50.0
-                            } else {
-                                0.001
-                            },
-                        )
+                        // (*p_last + p_random).lerp(
+                        //     *p_end + p_random,
+                        //     if percent_traversed > 0.0 {
+                        //         percent_traversed / 50.0
+                        //     } else {
+                        //         0.001
+                        //     },
+                        // )
+
+                        // we move by distance towards the "end point"
+                        let p_last = (*p_last + p_random);
+                        let v_to_end = (p_last - *p_end).normalize();
+
+                        (p_last) - v_to_end / 100.0
                     };
 
                     // println!("p_next: {p_next}");
@@ -268,7 +273,6 @@ fn step_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
 }
 
 fn move_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
-    let mut lines = model.lines.clone();
     let mut rng = model.rng.clone();
 
     // for (_, mut line) in &lines {
@@ -281,7 +285,9 @@ fn move_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
     //     }
     // }
 
-    lines.clone()
+    model
+        .lines
+        .clone()
         .into_iter()
         .map(|(hash, line)| {
             (
