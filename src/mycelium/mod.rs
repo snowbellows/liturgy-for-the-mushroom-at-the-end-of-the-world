@@ -335,6 +335,7 @@ fn draw_cirlce(draw: &Draw, p: &Point2) {
 }
 
 fn test_vector_math(draw: &Draw, iterations: u64) {
+    let draw = draw.x_y(0.0, -200.0);
     let p1 = pt2(0.0, 0.0);
     let p2 = pt2(0.0, 200.0);
     let p3 = pt2(-50.0, 250.0);
@@ -354,9 +355,9 @@ fn test_vector_math(draw: &Draw, iterations: u64) {
     draw_cirlce(p3);
     draw_cirlce(p4);
 
-    draw_line(draw, p1, p2);
-    draw_line(draw, p2, p3);
-    draw_line(draw, p2, p4);
+    draw_line(&draw, p1, p2);
+    draw_line(&draw, p2, p3);
+    draw_line(&draw, p2, p4);
 
     let lerp_10_p1_p2 = p1.lerp(p2, 0.5);
 
@@ -372,15 +373,17 @@ fn test_vector_math(draw: &Draw, iterations: u64) {
 }
 
 fn draw_join(draw: &Draw) {
+    let l = 300.0;
+    let draw = draw.x_y(0.0, -l * 2.0);
     let first_branch_start = pt2(0.0, 0.0);
-    let first_branch_end = pt2(0.0, 200.0);
-    let second_branch_end = pt2(-100.0, 300.0);
-    let third_branch_end = pt2(100.0, 300.0);
+    let first_branch_end = pt2(0.0, l * 2.0);
+    let second_branch_end = pt2(-l, l * 3.0);
+    let third_branch_end = pt2(l, l * 3.0);
     let points = [
         pt2(0.0, 0.0),
-        pt2(0.0, 200.0),
-        pt2(-100.0, 300.0),
-        pt2(100.0, 300.0),
+        pt2(0.0, l * 2.0),
+        pt2(-l, l * 3.0),
+        pt2(l, l * 3.0),
     ];
 
     let draw_line = |start: Point2, end: Point2| {
