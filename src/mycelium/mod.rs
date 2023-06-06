@@ -16,6 +16,7 @@ pub const NUM_SPOKES: u64 = 20;
 pub const BRANCH_LENGTH: f32 = 300.0;
 pub const TRANSPARENT_BLANCHED_ALMOND: (f32, f32, f32, f32) = (255.0, 235.0, 205.0, 0.000001);
 pub const STEP_LENGTH: f32 = 10.0;
+pub const FPS: u64 = 10;
 
 struct Model {
     rand_seed: u64,
@@ -24,9 +25,28 @@ struct Model {
     // starting_point: Point2,
     spoke_angles: Vec<f32>,
     starting_points: Vec<Point2>,
-    lines: HashMap<String, Vec<Point2>>,
+    lines: HashMap<String, Line>,
     frame_capture: FrameCapture,
     window_id: WindowId,
+}
+
+#[derive(Clone)]
+struct Line {
+    start: Point2,
+    end: Point2,
+    points: Vec<Point2>,
+    finished: bool,
+}
+
+impl Line {
+    pub fn new(start: Point2, end: Point2) -> Self {
+        Line {
+            start,
+            end,
+            points: vec![start],
+            finished: false,
+        }
+    }
 }
 
 // fn draw_branch(
@@ -111,10 +131,7 @@ impl Model {
 }
 
 pub fn main() {
-    nannou::app(model)
-        .loop_mode(LoopMode::RefreshSync)
-        .update(update)
-        .run();
+    nannou::app(model).update(update).run();
 }
 
 fn model(app: &App) -> Model {
@@ -133,10 +150,13 @@ fn model(app: &App) -> Model {
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
+    if app.elapsed_frames() % FPS != 0 {
+        return;
+    }
     // model.step_circles(app.duration.since_start);
-    let stepped_lines = step_lines(&model);
-    model.lines = stepped_lines;
+    model.lines = step_lines(&model);
 
+    // model.lines = move_lines(&model);
     let moved_lines = move_lines(&model);
     model.lines = moved_lines;
 }
@@ -148,6 +168,10 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
+    if app.elapsed_frames() % FPS != 0 {
+        return;
+    }
+
     // let draw = app.draw().xy(model.starting_point);
     let draw = app.draw();
     draw.background().color(BLACK);
@@ -166,9 +190,12 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // }
 
     for (_, line) in &model.lines {
-        draw_polyline(&draw, line);
+        draw_polyline(&draw, &line.points);
     }
 
+    draw.xy(app.window_rect().bottom_left() + vec2(50.0, 50.0))
+        .text(&app.fps().to_string())
+        .color(WHEAT);
     draw.finish_remaining_drawings();
     draw.to_frame(app, &frame).unwrap();
 
@@ -184,9 +211,10 @@ fn vec2_hash(v1: Vec2, v2: Vec2) -> String {
     format!("{v1}:{v2}")
 }
 
-fn step_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
+fn step_lines(model: &Model) -> HashMap<String, Line> {
     let mut lines = model.lines.clone();
-    let mut rng = model.rng.clone();
+    let mut rng = thread_rng();
+
     for p_start in &model.starting_points {
         for p_end in &model.starting_points {
             // println!("p_start: {p_start}");
@@ -211,18 +239,18 @@ fn step_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
             // once we have the closest point we grab the corresponding line between the two points or create a new one
             let line = lines
                 .entry(vec2_hash(*p_start, *p_end))
-                .or_insert(vec![*p_start]);
+                .or_insert(Line::new(*p_start, *p_end));
 
             // println!("line: {line:?}");
 
             // take the last point from the line
-            if let Some(p_last) = line.last() {
+            if let Some(p_last) = line.points.last() {
                 // if the last point in the line is the same as the "end point" we're done
                 if p_last != p_end {
                     // println!("p_last: {p_last}");
 
                     // if not check if we're within x pixels of the "end point" and return that
-                    let length = 2.0;
+                    let length = 3.0;
                     let d_left = p_last.distance(*p_end);
                     let p_next = if d_left <= length {
                         *p_end
@@ -230,11 +258,12 @@ fn step_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
                         // println!("percent_traversed: {percent_traversed}");
 
                         // randomise where the end point is for fun, curly lines
-                        let rand_amount = 3.0;
+                        let rand_amount = 100;
                         let p_random = vec2(
                             rng.gen_range(-rand_amount..=rand_amount) as f32,
                             rng.gen_range(-rand_amount..=rand_amount) as f32,
-                        );
+                        )
+                        .normalize();
 
                         // we lerp towards the "end point"
                         // let percent_traversed =
@@ -249,31 +278,28 @@ fn step_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
                         //     },
                         // )
 
-                        // we move by distance towards the "end point"
-                        let p_last = (*p_last + p_random);
-                        let v_to_end = (p_last - *p_end).normalize();
+                        // get the vector towards the "end point"
+                        let v_to_end = (*p_last - *p_end).normalize();
 
-                        (p_last) - v_to_end / 100.0
+                        // move towards the end point and add random for fun
+                        *p_last - (v_to_end * length + p_random)
                     };
 
                     // println!("p_next: {p_next}");
 
-                    line.push(p_next);
+                    line.points.push(p_next);
                 }
             } else {
                 println!("no p_last");
             }
-            // } else {
-            //     println!("no p_close");
-            // }
         }
     }
 
     lines
 }
 
-fn move_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
-    let mut rng = model.rng.clone();
+fn move_lines(model: &Model) -> HashMap<String, Line> {
+    let mut rng = thread_rng();
 
     // for (_, mut line) in &lines {
     //     for mut p in line {
@@ -290,18 +316,19 @@ fn move_lines(model: &Model) -> HashMap<String, Vec<Point2>> {
         .clone()
         .into_iter()
         .map(|(hash, line)| {
-            (
-                hash,
-                line.iter()
-                    .map(|p| {
-                        let rand_amount = 5;
-                        let x = rng.gen_range(-rand_amount..=rand_amount) as f32 / 10.0;
-                        let y = rng.gen_range(-rand_amount..=rand_amount) as f32 / 10.0;
+            let mut line = line.clone();
+            line.points = line
+                .points
+                .iter()
+                .map(|p| {
+                    let rand_amount = 100;
+                    let x = rng.gen_range(-rand_amount..=rand_amount) as f32;
+                    let y = rng.gen_range(-rand_amount..=rand_amount) as f32;
 
-                        *p + vec2(x, y)
-                    })
-                    .collect(),
-            )
+                    *p + (vec2(x, y).normalize() / 5.0)
+                })
+                .collect();
+            (hash, line)
         })
         .collect()
 }
@@ -310,11 +337,22 @@ fn draw_polyline(draw: &Draw, line: &Vec<Point2>) {
     // for p in line {
     //     draw_cirlce(draw, p)
     // }
+    let mut rng = thread_rng();
+    let line: Vec<Point2> = line
+        .iter()
+        .map(|p| {
+            let rand_amount = 100;
+            let x = rng.gen_range(-rand_amount..=rand_amount) as f32;
+            let y = rng.gen_range(-rand_amount..=rand_amount) as f32;
+
+            *p + (vec2(x, y).normalize() * 2.0)
+        })
+        .collect();
 
     draw.polyline()
         .weight(3.0)
         .color(Rgba::from_components(TRANSPARENT_BLANCHED_ALMOND))
-        .points(line.clone());
+        .points(line);
 }
 
 fn draw_line(draw: &Draw, start: Point2, end: Point2) {
