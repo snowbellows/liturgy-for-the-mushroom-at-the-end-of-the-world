@@ -157,8 +157,8 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     model.lines = step_lines(&model);
 
     // model.lines = move_lines(&model);
-    let moved_lines = move_lines(&model);
-    model.lines = moved_lines;
+
+    (model.starting_points, model.lines) = change_points(&model, &app);
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
@@ -331,6 +331,55 @@ fn move_lines(model: &Model) -> HashMap<String, Line> {
             (hash, line)
         })
         .collect()
+}
+
+fn change_points(model: &Model, app: &App) -> (Vec<Point2>, HashMap<String, Line>) {
+    let mut starting_points = model.starting_points.clone();
+    let mut lines = model.lines.clone();
+    for (index, p_start) in (starting_points.clone()).iter().enumerate() {
+        let is_finished = starting_points.iter().fold(true, |acc, p_end| {
+            let line = lines.get(&vec2_hash(*p_start, *p_end));
+            if let Some(line) = line {
+                // take the last point from the line
+                if let Some(p_last) = line.points.last() {
+                    // if the last point in the line isn't the same as the "end point" we're not finished yet!
+                    if p_last != p_end {
+                        return false;
+                    }
+                }
+            }
+            acc
+        });
+
+        if is_finished {
+            // remove the point
+            if index < starting_points.len() {
+                starting_points.remove(index);
+            }
+            // remove all it's lines
+            lines = lines
+                .into_iter()
+                .filter(|(key, line)| {
+                    if line.start == *p_start || line.end == *p_start {
+                        return false;
+                    }
+                    true
+                })
+                .collect();
+
+            // add a new point
+            let window_rect = app.window_rect();
+            let mut rng = thread_rng();
+
+            let p_new = vec2(
+                rng.gen_range(window_rect.x.start..window_rect.x.end),
+                rng.gen_range(window_rect.y.start..window_rect.y.end),
+            );
+
+            starting_points.push(p_new);
+        }
+    }
+    (starting_points, lines)
 }
 
 fn draw_polyline(draw: &Draw, line: &Vec<Point2>) {
