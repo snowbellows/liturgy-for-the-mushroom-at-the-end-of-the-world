@@ -203,3 +203,28 @@ fn draw_branch(draw: &Draw, length: f32, theta: f32, iterations: u64) {
         draw_branch(&draw3, new_length, theta, iterations - 1);
     }
 }
+
+// fn move_lines(model: &Model) -> Vec<Growth> {
+//     let mut rng = thread_rng();
+
+//     model
+//         .lines
+//         .clone()
+//         .into_iter()
+//         .map(|(hash, line)| {
+//             let mut line = line.clone();
+//             line.points = line
+//                 .points
+//                 .iter()
+//                 .map(|p| {
+//                     let rand_amount = 100;
+//                     let x = rng.gen_range(-rand_amount..=rand_amount) as f32;
+//                     let y = rng.gen_range(-rand_amount..=rand_amount) as f32;
+
+//                     *p + (vec2(x, y).normalize() / 5.0)
+//                 })
+//                 .collect();
+//             (hash, line)
+//         })
+//         .collect()
+// }
