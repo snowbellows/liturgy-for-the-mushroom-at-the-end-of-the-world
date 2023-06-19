@@ -152,38 +152,35 @@ impl Line {
     }
 
     pub fn step_line(&mut self) {
-        if let Some(p_last) = self.points.last() {
-            if !self.finished {
-                if self.end == *p_last {
+        if !self.finished {
+            if let Some(p_last) = self.points.last() {
+                // check if we're within x pixels of the "end point" and return that
+                let length = 2.0;
+                let d_left = p_last.0.distance(self.end);
+                let p_next = if d_left <= length * 2.0 {
                     self.finished = true;
+                    Point(self.end, vec2(0.0, 0.0))
                 } else {
-                    // if not check if we're within x pixels of the "end point" and return that
-                    let length = 2.0;
-                    let d_left = p_last.0.distance(self.end);
-                    let p_next = if d_left <= length {
-                        Point(self.end, vec2(0.0, 0.0))
-                    } else {
-                        // randomise where the end point is for fun, curly lines
-                        let rand_amount = 100;
-                        let rand_factor = 2.0;
-                        let mut rng = thread_rng();
+                    // randomise where the end point is for fun, curly lines
+                    let rand_amount = 100;
+                    let rand_factor = 2.0;
+                    let mut rng = thread_rng();
 
-                        let p_random = vec2(
-                            rng.gen_range(-rand_amount..=rand_amount) as f32,
-                            rng.gen_range(-rand_amount..=rand_amount) as f32,
-                        )
-                        .normalize()
-                            * rand_factor;
+                    let p_random = vec2(
+                        rng.gen_range(-rand_amount..=rand_amount) as f32,
+                        rng.gen_range(-rand_amount..=rand_amount) as f32,
+                    )
+                    .normalize()
+                        * rand_factor;
 
-                        // get the vector towards the "end point"
-                        let v_to_end = (*p_last - self.end).normalize();
+                    // get the vector towards the "end point"
+                    let v_to_end = (*p_last - self.end).normalize();
 
-                        // move towards the end point and add random for fun
-                        Point::new((*p_last - (v_to_end * length + p_random)).into())
-                    };
+                    // move towards the end point and add random for fun
+                    Point::new((*p_last - (v_to_end * length + p_random)).into())
+                };
 
-                    self.points.push(p_next);
-                }
+                self.points.push(p_next);
             }
         }
     }

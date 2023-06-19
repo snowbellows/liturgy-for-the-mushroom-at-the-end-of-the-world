@@ -1,9 +1,8 @@
 use std::time::Duration;
 
 // use crate::helpers::{cycle_value_over_time, FrameCapture};
-use nannou::{color::rgb_u32, prelude::*, lyon::math::rect};
+use nannou::{color::rgb_u32, prelude::*};
 use rand::prelude::*;
-use rand_chacha::ChaCha8Rng;
 
 use crate::helpers::*;
 
@@ -38,32 +37,7 @@ struct Model {
 
 impl Model {
     fn new_from_app(app: &App, window_id: WindowId) -> Self {
-        let rand_seed: u64 = random();
-
-        println!("{rand_seed}");
-
-        let mut rng = ChaCha8Rng::seed_from_u64(rand_seed);
-
-        let window_rect = app.window_rect();
-        let centre_points: Vec<Point2> = (0..NUM_GROWTHS)
-            .map(|_| {
-                vec2(
-                    rng.gen_range(window_rect.x.start - 50.0 ..window_rect.x.end + 50.0),
-                    rng.gen_range(window_rect.y.start - 50.0 ..window_rect.y.end + 50.0),
-                )
-            })
-            .collect();
-
-        let growths: Vec<Growth> = (&centre_points)
-            .iter()
-            .map(|p_c| {
-                Growth::new(
-                    *p_c,
-                    &centre_points,
-                    rgb_u32(rand_from_slice(&COLOURS)).into(),
-                )
-            })
-            .collect();
+        let growths: Vec<Growth> = create_new_growths(app, NUM_GROWTHS);
 
         Model {
             growths,
@@ -130,8 +104,18 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     let fps = app.fps();
     let num_growths = model.growths.len();
+    let finished = model
+        .growths
+        .iter()
+        .enumerate()
+        .map(|(i, g)| {
+            let finished = g.is_finished();
+            format!("{i}: {finished}")
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
     draw.xy(app.window_rect().bottom_left() + vec2(50.0, 50.0))
-        .text(&format!("{fps}\n{num_growths}"))
+        .text(&format!("{fps}\n{num_growths}\n{finished}"))
         .color(WHEAT);
     draw.finish_remaining_drawings();
     draw.to_frame(app, &frame).unwrap();
@@ -159,37 +143,72 @@ fn change_points(model: &Model, app: &App) -> Vec<Growth> {
     // let mut lines = model.lines.clone();
 
     // remove any finished growths
-    let mut growths: Vec<Growth> = model
+    // let mut growths: Vec<Growth> = model
+    //     .growths
+    //     .clone()
+    //     .into_iter()
+    //     .filter(|growth| !growth.is_finished())
+    //     .collect();
+
+    // // add a new growth for every removed one
+    // let num_removed_growths = NUM_GROWTHS as usize - growths.len();
+    // if num_removed_growths != 0 {
+    //     let window_rect = app.window_rect();
+    //     let mut rng = thread_rng();
+    //     let centre_points: Vec<Vec2> = growths.iter().map(|g| g.centre).collect();
+
+    //     let mut new_growths = (0..num_removed_growths)
+    //         .map(|_| {
+    //             let centre = vec2(
+    //                 rng.gen_range(window_rect.x.start - 50.0 ..window_rect.x.end + 50.0),
+    //                 rng.gen_range(window_rect.y.start - 50.0..window_rect.y.end - 50.0),
+    //             );
+
+    //             Growth::new(
+    //                 centre,
+    //                 &centre_points,
+    //                 rgb_u32(COLOURS[rng.gen_range(0..COLOURS.len() - 1)]).into(),
+    //             )
+    //         })
+    //         .collect();
+
+    //     growths.append(&mut new_growths);
+    // }
+
+    let is_finished = model
         .growths
-        .clone()
-        .into_iter()
-        .filter(|growth| !growth.is_finished())
+        .iter()
+        .fold(0, |acc, g| acc + if g.is_finished() { 1 } else { 0 })
+        >= model.growths.len() * 2 / 3;
+
+    if is_finished {
+        return create_new_growths(app, NUM_GROWTHS);
+    } else {
+        return model.growths.clone();
+    }
+}
+
+fn create_new_growths(app: &App, num_growths: u64) -> Vec<Growth> {
+    let mut rng = thread_rng();
+    let window_rect = app.window_rect();
+    let centre_points: Vec<Point2> = (0..num_growths)
+        .map(|_| {
+            vec2(
+                rng.gen_range(window_rect.x.start - 50.0..window_rect.x.end + 50.0),
+                rng.gen_range(window_rect.y.start - 50.0..window_rect.y.end + 50.0),
+            )
+        })
         .collect();
 
-    // add a new growth for every removed one
-    let num_removed_growths = NUM_GROWTHS as usize - growths.len();
-    if num_removed_growths != 0 {
-        let window_rect = app.window_rect();
-        let mut rng = thread_rng();
-        let centre_points: Vec<Vec2> = growths.iter().map(|g| g.centre).collect();
-
-        let mut new_growths = (0..num_removed_growths)
-            .map(|_| {
-                let centre = vec2(
-                    rng.gen_range(window_rect.x.start - 50.0 ..window_rect.x.end + 50.0),
-                    rng.gen_range(window_rect.y.start - 50.0..window_rect.y.end - 50.0),
-                );
-
-                Growth::new(
-                    centre,
-                    &centre_points,
-                    rgb_u32(COLOURS[rng.gen_range(0..COLOURS.len() - 1)]).into(),
-                )
-            })
-            .collect();
-
-        growths.append(&mut new_growths);
-    }
-
+    let growths: Vec<Growth> = (&centre_points)
+        .iter()
+        .map(|p_c| {
+            Growth::new(
+                *p_c,
+                &centre_points,
+                rgb_u32(rand_from_slice(&COLOURS)).into(),
+            )
+        })
+        .collect();
     growths
 }
