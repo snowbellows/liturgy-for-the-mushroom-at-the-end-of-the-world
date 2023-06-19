@@ -128,8 +128,10 @@ fn view(app: &App, model: &Model, frame: Frame) {
         growth.draw(&draw, model.vary_amount)
     }
 
+    let fps = app.fps();
+    let num_growths = model.growths.len();
     draw.xy(app.window_rect().bottom_left() + vec2(50.0, 50.0))
-        .text(&app.fps().to_string())
+        .text(&format!("{fps}\n{num_growths}"))
         .color(WHEAT);
     draw.finish_remaining_drawings();
     draw.to_frame(app, &frame).unwrap();
