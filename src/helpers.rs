@@ -1,6 +1,7 @@
 use std::{path::PathBuf, time::Duration};
 
 use nannou::prelude::*;
+use rand::prelude::*;
 
 pub fn cycle_value_over_time(
     current_time: Duration,
@@ -64,5 +65,13 @@ impl FrameCapture {
                 .join(format!("{}-{}", start_time.to_string(), seed)),
         };
     }
+}
 
+pub fn rand_normalised_vec() -> Vec2 {
+    let rand_amount = 100;
+    let mut rng = thread_rng();
+    let x = rng.gen_range(-rand_amount..=rand_amount) as f32;
+    let y = rng.gen_range(-rand_amount..=rand_amount) as f32;
+
+    vec2(x, y).normalize()
 }

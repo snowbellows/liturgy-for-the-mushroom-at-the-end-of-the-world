@@ -1,7 +1,11 @@
+use std::time::Duration;
+
 // use crate::helpers::{cycle_value_over_time, FrameCapture};
-use nannou::prelude::*;
+use nannou::{color::rgb_u32, prelude::*};
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
+
+use crate::helpers::cycle_value_over_time;
 
 use self::growth::{Growth, Line};
 
@@ -14,14 +18,22 @@ pub const CYCLE_SECONDS: f32 = 10.0;
 pub const NUM_ITERS: u64 = 5;
 pub const NUM_GROWTHS: u64 = 20;
 pub const BRANCH_LENGTH: f32 = 300.0;
-pub const TRANSPARENT_BLANCHED_ALMOND: (f32, f32, f32, f32) = (255.0, 235.0, 205.0, 0.000001);
 pub const STEP_LENGTH: f32 = 10.0;
-pub const FPS: u64 = 10;
+pub const FPS: u64 = 2;
+
+pub const TRANSPARENT_BLANCHED_ALMOND: (f32, f32, f32, f32) = (255.0, 235.0, 205.0, 0.000001);
+pub const FRENCH_GREY: u32 = 0xC6BCC8;
+pub const PINK_LAVENDAR: u32 = 0xD7ACCC;
+pub const THISTLE: u32 = 0xD1B3BD;
+pub const CHAMPAGNE: u32 = 0xFCE5C5;
+pub const TEA_GREEN: u32 = 0xC5DCBC;
+pub const COLOURS: [u32; 5] = [FRENCH_GREY, PINK_LAVENDAR, THISTLE, TEA_GREEN, CHAMPAGNE];
 
 struct Model {
     growths: Vec<Growth>,
     // frame_capture: FrameCapture,
     window_id: WindowId,
+    vary_amount: f32,
 }
 
 impl Model {
@@ -33,14 +45,23 @@ impl Model {
         let mut rng = ChaCha8Rng::seed_from_u64(rand_seed);
 
         let window_rect = app.window_rect();
-
-        let growths = (0..NUM_GROWTHS)
+        let centre_points: Vec<Point2> = (0..NUM_GROWTHS)
             .map(|_| {
-                let centre = vec2(
+                vec2(
                     rng.gen_range(window_rect.x.start..window_rect.x.end),
                     rng.gen_range(window_rect.y.start..window_rect.y.end),
-                );
-                Growth::new(centre)
+                )
+            })
+            .collect();
+
+        let growths: Vec<Growth> = (&centre_points)
+            .iter()
+            .map(|p_c| {
+                Growth::new(
+                    *p_c,
+                    &centre_points,
+                    rgb_u32(COLOURS[rng.gen_range(0..COLOURS.len() - 1)]).into(),
+                )
             })
             .collect();
 
@@ -48,12 +69,16 @@ impl Model {
             growths,
             // frame_capture: FrameCapture::new_from_app_with_seed(app, &rand_seed.to_string()),
             window_id,
+            vary_amount: 1.0
         }
     }
 }
 
 pub fn main() {
-    nannou::app(model).update(update).run();
+    nannou::app(model)
+        .update(update)
+        .loop_mode(LoopMode::RefreshSync)
+        .run();
 }
 
 fn model(app: &App) -> Model {
@@ -72,14 +97,16 @@ fn model(app: &App) -> Model {
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
-    // if app.elapsed_frames() % FPS != 0 {
-    //     return;
-    // }
+    if app.elapsed_frames() % FPS != 0 {
+        return;
+    }
     // model.step_circles(app.duration.since_start);
     model.growths = step_growths(&model);
     // model.lines = move_lines(&model);
 
     model.growths = change_points(&model, &app);
+
+    model.vary_amount = cycle_value_over_time(app.duration.since_start, Duration::from_secs(12), 1.0, 20.0)
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
@@ -89,15 +116,15 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
-    // if app.elapsed_frames() % FPS != 0 {
-    //     return;
-    // }
+    if app.elapsed_frames() % FPS != 0 {
+        return;
+    }
     // let draw = app.draw().xy(model.starting_point);
     let draw = app.draw();
     draw.background().color(BLACK);
 
     for growth in &model.growths {
-        growth.draw(&draw)
+        growth.draw(&draw, model.vary_amount)
     }
 
     draw.xy(app.window_rect().bottom_left() + vec2(50.0, 50.0))
@@ -116,53 +143,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
 fn step_growths(model: &Model) -> Vec<Growth> {
     let mut growths = model.growths.clone();
-    let mut rng = thread_rng();
 
-    for g_start in &mut growths {
-        for g_end in &model.growths {
-            let p_start = g_start.centre;
-            let p_end = g_end.centre;
-            // for every start and end we grab the corresponding line between the two points or create a new one
-            let line = g_start
-                .lines
-                .entry(g_end.centre.to_string())
-                .or_insert(Line::new(p_start, p_end));
-
-            // take the last point from the line
-            if let Some(p_last) = line.points.last() {
-                // if the last point in the line is the same as the "end point" we're done
-                if *p_last == p_end {
-                    line.finished = true;
-                } else {
-
-                    // if not check if we're within x pixels of the "end point" and return that
-                    let length = 2.0;
-                    let d_left = p_last.distance(p_end);
-                    let p_next = if d_left <= length {
-                        p_end
-                    } else {
-                        // randomise where the end point is for fun, curly lines
-                        let rand_amount = 100;
-                        let rand_factor = 2.0;
-                        let p_random = vec2(
-                            rng.gen_range(-rand_amount..=rand_amount) as f32,
-                            rng.gen_range(-rand_amount..=rand_amount) as f32,
-                        )
-                        .normalize() * rand_factor;
-
-                        // get the vector towards the "end point"
-                        let v_to_end = (*p_last - p_end).normalize();
-
-                        // move towards the end point and add random for fun
-                        *p_last - (v_to_end * length + p_random)
-                    };
-
-                    line.points.push(p_next);
-                }
-            } else {
-                println!("no p_last");
-            }
-        }
+    for g in &mut growths {
+        g.step_growth()
     }
 
     growths
@@ -185,6 +168,7 @@ fn change_points(model: &Model, app: &App) -> Vec<Growth> {
     if num_removed_growths != 0 {
         let window_rect = app.window_rect();
         let mut rng = thread_rng();
+        let centre_points: Vec<Vec2> = growths.iter().map(|g| g.centre).collect();
 
         let mut new_growths = (0..num_removed_growths)
             .map(|_| {
@@ -192,7 +176,12 @@ fn change_points(model: &Model, app: &App) -> Vec<Growth> {
                     rng.gen_range(window_rect.x.start..window_rect.x.end),
                     rng.gen_range(window_rect.y.start..window_rect.y.end),
                 );
-                Growth::new(centre)
+
+                Growth::new(
+                    centre,
+                    &centre_points,
+                    rgb_u32(COLOURS[rng.gen_range(0..COLOURS.len() - 1)]).into(),
+                )
             })
             .collect();
 
