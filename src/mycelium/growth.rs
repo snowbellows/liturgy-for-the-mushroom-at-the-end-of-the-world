@@ -1,10 +1,8 @@
 use nannou::prelude::*;
 use rand::prelude::*;
-use std::{collections::HashMap, ops::{Add, Sub, Mul}};
+use std::ops::{Add, Mul, Sub};
 
 use crate::helpers::rand_normalised_vec;
-
-use super::TRANSPARENT_BLANCHED_ALMOND;
 
 #[derive(Clone, Debug)]
 pub struct Growth {
@@ -65,7 +63,6 @@ impl Point {
     pub fn vary_by_amount(&self, amount: f32) -> Point2 {
         self.0 + (self.1 * amount)
     }
-
 }
 
 impl From<Point> for Point2 {
@@ -136,9 +133,6 @@ impl Mul<f32> for Point {
     }
 }
 
-
-
-
 #[derive(Clone, Debug)]
 pub struct Line {
     pub start: Point2,
@@ -186,7 +180,6 @@ impl Line {
 
                         // move towards the end point and add random for fun
                         Point::new((*p_last - (v_to_end * length + p_random)).into())
-                        
                     };
 
                     self.points.push(p_next);
@@ -208,5 +201,4 @@ impl Line {
             .color(colour.clone())
             .points(points);
     }
-
 }

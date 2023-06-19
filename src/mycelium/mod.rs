@@ -5,9 +5,9 @@ use nannou::{color::rgb_u32, prelude::*};
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 
-use crate::helpers::cycle_value_over_time;
+use crate::helpers::*;
 
-use self::growth::{Growth, Line};
+use self::growth::Growth;
 
 mod growth;
 #[allow(dead_code)]
@@ -60,7 +60,7 @@ impl Model {
                 Growth::new(
                     *p_c,
                     &centre_points,
-                    rgb_u32(COLOURS[rng.gen_range(0..COLOURS.len() - 1)]).into(),
+                    rgb_u32(rand_from_slice(&COLOURS)).into(),
                 )
             })
             .collect();
@@ -69,7 +69,7 @@ impl Model {
             growths,
             // frame_capture: FrameCapture::new_from_app_with_seed(app, &rand_seed.to_string()),
             window_id,
-            vary_amount: 1.0
+            vary_amount: 1.0,
         }
     }
 }
@@ -106,7 +106,8 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 
     model.growths = change_points(&model, &app);
 
-    model.vary_amount = cycle_value_over_time(app.duration.since_start, Duration::from_secs(12), 1.0, 20.0)
+    model.vary_amount =
+        cycle_value_over_time(app.duration.since_start, Duration::from_secs(12), 1.0, 20.0)
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {

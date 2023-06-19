@@ -75,3 +75,12 @@ pub fn rand_normalised_vec() -> Vec2 {
 
     vec2(x, y).normalize()
 }
+
+pub trait RandFromSlice<T> {
+    fn rand_from_slice(slice: &[T]) -> T;
+}
+
+pub fn rand_from_slice<T: Copy>(slice: &[T]) -> T {
+    let mut rng = thread_rng();
+    slice[rng.gen_range(0..slice.len())]
+}
