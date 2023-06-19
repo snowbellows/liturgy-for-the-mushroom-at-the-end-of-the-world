@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 // use crate::helpers::{cycle_value_over_time, FrameCapture};
-use nannou::{color::rgb_u32, prelude::*};
+use nannou::{color::rgb_u32, prelude::*, lyon::math::rect};
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 
@@ -48,8 +48,8 @@ impl Model {
         let centre_points: Vec<Point2> = (0..NUM_GROWTHS)
             .map(|_| {
                 vec2(
-                    rng.gen_range(window_rect.x.start..window_rect.x.end),
-                    rng.gen_range(window_rect.y.start..window_rect.y.end),
+                    rng.gen_range(window_rect.x.start - 50.0 ..window_rect.x.end + 50.0),
+                    rng.gen_range(window_rect.y.start - 50.0 ..window_rect.y.end + 50.0),
                 )
             })
             .collect();
@@ -176,8 +176,8 @@ fn change_points(model: &Model, app: &App) -> Vec<Growth> {
         let mut new_growths = (0..num_removed_growths)
             .map(|_| {
                 let centre = vec2(
-                    rng.gen_range(window_rect.x.start..window_rect.x.end),
-                    rng.gen_range(window_rect.y.start..window_rect.y.end),
+                    rng.gen_range(window_rect.x.start - 50.0 ..window_rect.x.end + 50.0),
+                    rng.gen_range(window_rect.y.start - 50.0..window_rect.y.end - 50.0),
                 );
 
                 Growth::new(
