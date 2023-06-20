@@ -18,7 +18,7 @@ pub const NUM_ITERS: u64 = 5;
 pub const NUM_GROWTHS: u64 = 20;
 pub const BRANCH_LENGTH: f32 = 300.0;
 pub const STEP_LENGTH: f32 = 10.0;
-pub const FPS: u64 = 2;
+pub const FPS: u64 = 5;
 
 pub const TRANSPARENT_BLANCHED_ALMOND: (f32, f32, f32, f32) = (255.0, 235.0, 205.0, 0.000001);
 pub const FRENCH_GREY: u32 = 0xC6BCC8;
@@ -81,7 +81,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     model.growths = change_points(&model, &app);
 
     model.vary_amount =
-        cycle_value_over_time(app.duration.since_start, Duration::from_secs(12), 1.0, 20.0)
+        cycle_value_over_time(app.duration.since_start, Duration::from_secs(12), 1.0, 10.0)
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
