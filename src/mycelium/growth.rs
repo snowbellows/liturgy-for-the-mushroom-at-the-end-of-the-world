@@ -31,9 +31,9 @@ impl Growth {
             .fold(true, |acc, line| acc && line.finished)
     }
 
-    pub fn step_growth(&mut self) {
+    pub fn step_growth(&mut self, app: &App) {
         for l in &mut self.lines {
-            l.step_line()
+            l.step_line(app)
         }
     }
 
@@ -151,7 +151,7 @@ impl Line {
         }
     }
 
-    pub fn step_line(&mut self) {
+    pub fn step_line(&mut self, app: &App) {
         if !self.finished {
             if let Some(p_last) = self.points.last() {
                 // check if we're within x pixels of the "end point" and return that
@@ -177,7 +177,7 @@ impl Line {
                     let v_to_end = (*p_last - self.end).normalize();
 
                     // move towards the end point and add random for fun
-                    Point::new((*p_last - (v_to_end * length + p_random)).into())
+                    Point::new((*p_last - (v_to_end * length * app.duration.since_prev_update.as_secs_f32() * 20.0 + p_random)).into())
                 };
 
                 self.points.push(p_next);

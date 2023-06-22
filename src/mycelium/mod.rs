@@ -71,11 +71,11 @@ fn model(app: &App) -> Model {
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
-    if app.elapsed_frames() % FPS != 0 {
-        return;
-    }
+    // if app.elapsed_frames() % FPS != 0 {
+    //     return;
+    // }
     // model.step_circles(app.duration.since_start);
-    model.growths = step_growths(&model);
+    model.growths = step_growths(&model, app);
     // model.lines = move_lines(&model);
 
     model.growths = change_points(&model, &app);
@@ -91,9 +91,9 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
-    if app.elapsed_frames() % FPS != 0 {
-        return;
-    }
+    // if app.elapsed_frames() % FPS != 0 {
+    //     return;
+    // }
     // let draw = app.draw().xy(model.starting_point);
     let draw = app.draw();
     draw.background().color(BLACK);
@@ -102,21 +102,21 @@ fn view(app: &App, model: &Model, frame: Frame) {
         growth.draw(&draw, model.vary_amount)
     }
 
-    let fps = app.fps();
-    let num_growths = model.growths.len();
-    let finished = model
-        .growths
-        .iter()
-        .enumerate()
-        .map(|(i, g)| {
-            let finished = g.is_finished();
-            format!("{i}: {finished}")
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
-    draw.xy(app.window_rect().bottom_left() + vec2(50.0, 50.0))
-        .text(&format!("{fps}\n{num_growths}\n{finished}"))
-        .color(WHEAT);
+    // let fps = app.fps();
+    // let num_growths = model.growths.len();
+    // let finished = model
+    //     .growths
+    //     .iter()
+    //     .enumerate()
+    //     .map(|(i, g)| {
+    //         let finished = g.is_finished();
+    //         format!("{i}: {finished}")
+    //     })
+    //     .collect::<Vec<_>>()
+    //     .join(", ");
+    // draw.xy(app.window_rect().bottom_left() + vec2(20.0, 20.0))
+    //     .text(&format!("{fps}"))
+    //     .color(WHEAT);
     draw.finish_remaining_drawings();
     draw.to_frame(app, &frame).unwrap();
 
@@ -128,11 +128,11 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // }
 }
 
-fn step_growths(model: &Model) -> Vec<Growth> {
+fn step_growths(model: &Model, app: &App) -> Vec<Growth> {
     let mut growths = model.growths.clone();
 
     for g in &mut growths {
-        g.step_growth()
+        g.step_growth(app)
     }
 
     growths
