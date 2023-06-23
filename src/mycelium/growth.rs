@@ -4,6 +4,8 @@ use std::ops::{Add, Mul, Sub};
 
 use crate::helpers::rand_normalised_vec;
 
+use super::Config;
+
 #[derive(Clone, Debug)]
 pub struct Growth {
     pub centre: Point2,
@@ -31,9 +33,9 @@ impl Growth {
             .fold(true, |acc, line| acc && line.finished)
     }
 
-    pub fn step_growth(&mut self, app: &App) {
+    pub fn step_growth(&mut self, app: &App, config: &Config) {
         for l in &mut self.lines {
-            l.step_line(app)
+            l.step_line(app, config)
         }
     }
 
@@ -151,7 +153,7 @@ impl Line {
         }
     }
 
-    pub fn step_line(&mut self, app: &App) {
+    pub fn step_line(&mut self, app: &App, config: &Config) {
         if !self.finished {
             if let Some(p_last) = self.points.last() {
                 // check if we're within x pixels of the "end point" and return that
@@ -163,7 +165,6 @@ impl Line {
                 } else {
                     // randomise where the end point is for fun, curly lines
                     let rand_amount = 100;
-                    let rand_factor = 2.0;
                     let mut rng = thread_rng();
 
                     let p_random = vec2(
@@ -171,13 +172,21 @@ impl Line {
                         rng.gen_range(-rand_amount..=rand_amount) as f32,
                     )
                     .normalize()
-                        * rand_factor;
+                        * config.get_with_default("rand_factor", 1.5);
 
                     // get the vector towards the "end point"
                     let v_to_end = (*p_last - self.end).normalize();
 
                     // move towards the end point and add random for fun
-                    Point::new((*p_last - (v_to_end * length * app.duration.since_prev_update.as_secs_f32() * 20.0 + p_random)).into())
+                    Point::new(
+                        (*p_last
+                            - (v_to_end
+                                * length
+                                * app.duration.since_prev_update.as_secs_f32()
+                                * config.get_with_default("step_amount", 8.0)
+                                + p_random))
+                            .into(),
+                    )
                 };
 
                 self.points.push(p_next);
